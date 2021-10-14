@@ -1,0 +1,78 @@
+---
+title: "p8105_hw3_hw2849"
+author: hw2849
+date: 2021.10.13
+output: github_document
+---
+
+```{r, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(p8105.datasets)
+data("instacart")
+```
+
+## Problem 1
+```{r}
+instacart %>% 
+  group_by(aisle_id) %>% 
+  
+  ## count for how many aisles and orders in each aisle
+  summarize(order_counts = n()) %>% 
+  
+  ## ranking aisles by the number of orders
+  mutate(ranking = min_rank(desc(order_counts))) %>% 
+  
+  ## filter the aisle ranked `1`
+  filter(min_rank(ranking) < 2)
+
+## A plot for aisles with 10000 more orders
+plot_df = instacart %>% 
+  group_by(aisle_id) %>% 
+  count(aisle_id, name = "orders_over_10000") %>% 
+  filter(orders_over_10000 > 10000) 
+
+  ggplot(plot_df, aes(x = aisle_id, y = orders_over_10000)) + 
+    geom_point()
+  
+
+## A table for three most popular items in “baking ingredients”, “dog food care”, and “packaged vegetables fruits”
+
+table = instacart %>% 
+  group_by(aisle) %>% 
+  filter(
+    aisle %in% c("baking ingredients", 
+                 "dog food care", 
+                 "packaged vegetables fruits")
+    ) %>% 
+  count(product_name, name = "counts") %>% 
+  mutate(
+    ranking = min_rank(desc(counts))
+  ) %>% 
+  filter(ranking < 4)
+
+table
+
+## A table for mean hour of the day Pink Lady Apples and Coffee Ice Cream
+table_mean_hour = instacart %>% 
+  group_by(product_name, order_dow) %>% 
+  filter(
+    product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")
+      ) %>% 
+  summarize(
+    mean_hour = mean(order_hour_of_day)) %>% 
+pivot_wider(
+  names_from = order_dow,
+  values_from = mean_hour
+)
+
+table_mean_hour
+
+```
+
+First, we have 1384617 observations with 15 variables in `instacart` dataset, which  including user ids, product names, product aisles, aisles numbers, the day of the week and the hour of the day on which the order was placed. 
+
+There are 134 aisles, and the most items ordered from aisle 83, which is fresh vegetables. The plot shows the number of items ordered in aisles that are more than 10000 items ordered. 
+
+The table shows three most popular items in aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. For example,top three popular items of "baking ingredients" are light brown sugar, pure baking soda, and cane sugar. 
+
+The last table summarizes the mean hour of the day that "Pink Lady Apples" and "Coffee Ice Cream" are ordered on each day of the week. For instance, the mean hour at "Coffee Ice Cream" are ordered on day "3" is 15.31818. 
