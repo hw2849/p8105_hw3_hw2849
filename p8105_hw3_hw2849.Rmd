@@ -7,6 +7,7 @@ output: github_document
 
 ```{r, message = FALSE, warning = FALSE}
 library(tidyverse)
+library(timeDate)
 library(p8105.datasets)
 data("instacart")
 data("brfss_smart2010")
@@ -37,13 +38,22 @@ instacart %>%
 
 ## Sort aisles with 10000 more orders
 plot_df = instacart %>% 
-  group_by(aisle_id) %>% 
-  count(aisle_id, name = "orders_over_10000") %>% 
-  filter(orders_over_10000 > 10000) 
+  count(aisle, name = "orders_over_10000") %>% ## count for variable
+  filter(orders_over_10000 > 10000) %>% 
+  mutate(
+    aisle = factor(aisle),
+    aisle = fct_reorder(aisle, orders_over_10000)
+  ) %>% 
+  ggplot(aes(x = aisle, y = orders_over_10000)) + 
+  geom_point() + 
+  labs(
+    title = "Figure 1: Aisles of over 10000 items ordered",
+    x = "Aisle",
+    y = "Number of items ordered"
+  ) + 
+  theme(axis.text.x = element_text(angle = 90))
 
-  ggplot(plot_df, aes(x = aisle_id, y = orders_over_10000)) + 
-    geom_point()
-  
+plot_df
 
 ## A table for three most popular items in “baking ingredients”, “dog food care”, and “packaged vegetables fruits”
 table = instacart %>% 
@@ -70,14 +80,13 @@ table_mean_hour = instacart %>%
   summarize(
     mean_hour = mean(order_hour_of_day)
     ) %>% 
-  
- ##??  lubridate::wday(order_dow + 1)   
-## mutate(order_dow = wday(order_dow + 1))
- 
-pivot_wider(
+ mutate(
+   order_dow = lubridate::wday(order_dow + 1, label = TRUE)
+   ) %>% 
+  pivot_wider(
   names_from = order_dow,
   values_from = mean_hour
-)
+  )
 
 table_mean_hour
 
@@ -133,7 +142,12 @@ mean_data_value = health_data_df %>%
   
 ## A spaghetti plot that shows lines for the mean value of each state across years
 spaghetti_plot = ggplot(mean_data_value) + 
-  geom_line(aes(x = year, y = mean_value, color = state)) 
+  geom_line(aes(x = year, y = mean_value, color = state)) + 
+  labs(
+    title = "Figure 2: Average value across locations within each state over years",
+    x = "State",
+    y = "Average value"
+  )
 
 spaghetti_plot
 ```
@@ -147,7 +161,12 @@ NY_response_df = health_data_df %>%
     ) %>% 
   ggplot(aes(x = response, y = data_value)) + 
   geom_boxplot() + 
-  facet_grid(.~year)
+  facet_grid(.~year) + 
+  labs(
+    title = "Figure 3: Data value across responses in NY State", 
+    x = "Response levels",
+    y = "Data Value"
+  ) 
 
 NY_response_df
 ```
@@ -159,3 +178,48 @@ Looking at the data frame, in 2002, there were 36 states were observed at 7 or m
 Next, we constructed a dataset that limits to 'Excellent' responses, and grouped by 'year', 'state', and created a variable 'mean_value' that indicates the average values of 'data_value' across locations within a state. Graphed a spaghetti plot that shows lines for the mean value of each state across years. 
 
 Lastly, generated a two-panel plot showing the distribution of 'data_value' for response in 2006 and 2010 for NY state. 
+
+## Problem 3
+```{r}
+accelerometer_data = read_csv("./data/accel_data.csv") %>% 
+  janitor::clean_names() %>% ## clean variable names
+  pivot_longer( ## make the table readable
+    activity_1:activity_1440,
+    names_to = "activity_time",
+    names_prefix = "activity_",
+    values_to = "value"
+  ) %>% 
+  mutate( ## refactor the variables
+    day = factor(day, levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")), 
+    week = factor(week), 
+    weekday_or_weekend = ifelse(day == "Sunday" | day == "Saturday", print("Weekend"), print("Weekday")), ## a new variable whether weekend/weekday
+    activity_time = as.numeric(activity_time)
+    ) %>% 
+  arrange(week, day) ## reorder the variables by `day`
+```
+
+
+```{r}
+accelerometer_data %>% 
+  group_by(day_id) %>% 
+  summarize(total_time = sum(value)) %>% 
+ggplot(aes(x = day_id, y = total_time)) + 
+  geom_point() + 
+  geom_line()
+```
+
+
+```{r}
+accelerometer_data %>% 
+  ggplot(aes(x = activity_time, 
+             y = value, 
+             group = day_id, 
+             color = day)
+         ) +  
+  geom_smooth(aes(group = day)) + 
+  scale_x_continuous(
+    breaks = c(0, 360, 720, 1080, 1440),
+    labels = c("0AM", "6AM", "12PM", "6PM", "12AM")
+  )
+```
+
